@@ -1,0 +1,190 @@
+@{
+    ViewData["Title"] = "Virtual Planetarium";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Virtual Planetarium</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050505;
+            overflow: hidden;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .hud-nav {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .hud-nav a {
+            color: white;
+            text-decoration: none;
+            margin-right: 15px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .hud-nav a:hover {
+            color: #00d2ff;
+        }
+
+        .planet-info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 20, 40, 0.85);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #00d2ff;
+            min-width: 250px;
+            display: none;
+            box-shadow: 0 0 15px #00d2ff;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="hud-nav">
+        <span style="color:#aaa; margin-right:20px;">🚀 Virtual Planetarium</span>
+        <a href="/CelestialObjects">Каталог</a>
+        <a href="/Account/Login" style="color: #ffc107;">Вхід</a>
+    </div>
+
+    <div class="planet-info" id="infoBox">
+        <h3 id="pName" style="color: #00d2ff; margin-top:0;">Name</h3>
+        <p id="pDesc" style="font-size: 0.9em; color: #ccc;">Description...</p>
+        <hr style="border-color: #555;">
+        <small>Координати: <span id="pCoords"></span></small>
+    </div>
+    
+    <canvas id="spaceCanvas"></canvas>
+    
+    <script>
+        const canvas = document.getElementById('spaceCanvas');
+        const ctx = canvas.getContext('2d');
+        const infoBox = document.getElementById('infoBox');
+        let planets = [];
+        let width, height, centerX, centerY;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            centerX = width / 2;
+            centerY = height / 2;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function getRandomColor() {
+            const letters = '456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 12)];
+            }
+            return color;
+        }
+
+        fetch('/CelestialObjects/GetMapData')
+            .then(res => res.json())
+            .then(data => {
+                planets = data.map(p => ({
+                    ...p,
+                    orbitRadius: (p.x > 0 ? p.x : Math.random() * 10) * 40,
+                    speed: (p.y > 0 ? p.y : Math.random()) * 0.005,
+                    color: getRandomColor(),
+                    angle: Math.random() * Math.PI * 2,
+                    size: p.name === 'Sun' ? 20 : (Math.random() * 5 + 3)
+                }));
+                animate();
+            });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+
+            drawStars();
+
+            planets.forEach(p => {
+                if (p.name !== 'Sun') {
+                    p.angle += p.speed;
+                    p.screenX = centerX + Math.cos(p.angle) * p.orbitRadius;
+                    p.screenY = centerY + Math.sin(p.angle) * p.orbitRadius;
+
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, p.orbitRadius, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                    ctx.stroke();
+                } else {
+                    p.screenX = centerX;
+                    p.screenY = centerY;
+                }
+
+                ctx.beginPath();
+                ctx.arc(p.screenX, p.screenY, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = p.name === 'Sun' ? '#ffaa00' : p.color;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = p.name === 'Sun' ? '#ffaa00' : p.color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                ctx.fillStyle = 'white';
+                ctx.font = '10px Arial';
+                ctx.fillText(p.name, p.screenX + 10, p.screenY);
+            });
+        }
+
+        function drawStars() {
+            for(let i=0; i<5; i++) {
+                const x = Math.random() * width;
+                const y = Math.random() * height;
+                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                ctx.fillRect(x,y,1,1);
+            }
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+            let found = false;
+
+            planets.forEach(p => {
+                const dx = mouseX - p.screenX;
+                const dy = mouseY - p.screenY;
+                if (Math.sqrt(dx*dx + dy*dy) < p.size + 5) {
+                    canvas.style.cursor = 'pointer';
+
+                    document.getElementById('pName').innerText = p.name;
+                    document.getElementById('pDesc').innerText = p.description || "Опис відсутній";
+                    document.getElementById('pCoords').innerText = `${p.x}°, ${p.y}°`;
+
+                    infoBox.style.display = 'block';
+                    found = true;
+                }
+            });
+
+            if (!found) {
+                canvas.style.cursor = 'default';
+                infoBox.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
