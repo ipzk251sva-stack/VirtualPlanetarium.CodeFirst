@@ -1,0 +1,103 @@
+﻿@model VirtualPlanetarium.CodeFirst.Models.CelestialObject
+
+@{
+    ViewData["Title"] = "Створити об'єкт";
+    Layout = "_Layout";
+}
+
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+
+            <div class="card bg-dark text-white border-secondary shadow-lg" style="border: 1px solid #444;">
+                <div class="card-header border-secondary text-center py-3 bg-opacity-10 bg-secondary">
+                    <h2 class="text-info fw-bold m-0">➕ Додати новий об'єкт</h2>
+                </div>
+
+                <div class="card-body p-4">
+                    <form asp-action="Create">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <h5 class="text-secondary border-bottom border-secondary pb-2 mb-3">📝 Основне</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label asp-for="Name" class="control-label text-light small text-uppercase">Назва</label>
+                                <input asp-for="Name" class="form-control bg-black text-white border-secondary" placeholder="Наприклад: Kepler-186f" />
+                                <span asp-validation-for="Name" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="TypeId" class="control-label text-light small text-uppercase">Тип об'єкта</label>
+                                <select asp-for="TypeId" class="form-select bg-black text-white border-secondary" asp-items="ViewBag.TypeId">
+                                    <option value="">Оберіть тип...</option>
+                                </select>
+                                <span asp-validation-for="TypeId" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="control-label text-light small text-uppercase">Опис</label>
+                            <textarea asp-for="Description" class="form-control bg-black text-white border-secondary" rows="3" placeholder="Короткий опис планети чи зірки..."></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <h5 class="text-secondary border-bottom border-secondary pb-2 mb-3 mt-4">📊 Характеристики</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="GroupId" class="control-label text-light small text-uppercase">Група / Система</label>
+                                <select asp-for="GroupId" class="form-select bg-black text-white border-secondary" asp-items="ViewBag.GroupId">
+                                    <option value="">Оберіть групу (необов'язково)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="SpectralClass" class="control-label text-light small text-uppercase">Спектральний клас</label>
+                                <input asp-for="SpectralClass" class="form-control bg-black text-white border-secondary" placeholder="Напр: G2V" />
+                                <span asp-validation-for="SpectralClass" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <h5 class="text-secondary border-bottom border-secondary pb-2 mb-3 mt-4">🚀 Орбітальні дані (для 3D карти)</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="RightAscension" class="control-label text-info small text-uppercase fw-bold">Відстань від центру (а.о.)</label>
+                                <input asp-for="RightAscension" class="form-control bg-black text-white border-secondary" type="number" step="0.1" placeholder="0.0" />
+                                <span asp-validation-for="RightAscension" class="text-danger"></span>
+                                <small class="text-muted" style="font-size: 0.75rem;">Дистанція орбіти</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Declination" class="control-label text-info small text-uppercase fw-bold">Швидкість руху</label>
+                                <input asp-for="Declination" class="form-control bg-black text-white border-secondary" type="number" step="0.1" placeholder="0.0" />
+                                <span asp-validation-for="Declination" class="text-danger"></span>
+                                <small class="text-muted" style="font-size: 0.75rem;">Швидкість обертання</small>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4 mt-4">
+                            <div class="col-md-6">
+                                <label asp-for="DateDiscovered" class="control-label text-light small text-uppercase">Дата відкриття</label>
+                                <input asp-for="DateDiscovered" class="form-control bg-black text-white border-secondary" type="date" />
+                                <span asp-validation-for="DateDiscovered" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Tags" class="control-label text-light small text-uppercase">Теги</label>
+                                <input asp-for="Tags" class="form-control bg-black text-white border-secondary" placeholder="Напр: Gas, Giant, Rings" />
+                                <span asp-validation-for="Tags" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-3 d-md-flex justify-content-md-center mt-5">
+                            <a asp-action="Index" class="btn btn-outline-light px-4 py-2">⬅ Скасувати</a>
+                            <input type="submit" value="Створити об'єкт" class="btn btn-success px-5 py-2 fw-bold shadow" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

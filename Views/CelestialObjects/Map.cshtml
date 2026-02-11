@@ -1,0 +1,345 @@
+﻿@{
+    ViewData["Title"] = "Інтерактивний Всесвіт";
+    Layout = "_Layout";
+}
+
+<style>
+    .map-wrapper {
+        position: relative;
+        width: 100%;
+        height: 92vh;
+        background: radial-gradient(circle at center, #0b0d17 0%, #000000 100%);
+        overflow: hidden;
+        cursor: grab;
+    }
+
+        .map-wrapper:active {
+            cursor: grabbing;
+        }
+    .controls-panel {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.7);
+        padding: 10px 25px;
+        border-radius: 50px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        z-index: 20;
+        backdrop-filter: blur(5px);
+    }
+
+    input[type=range] {
+        width: 150px;
+        accent-color: #00d2ff;
+    }
+    .info-panel {
+        position: absolute;
+        top: 0;
+        right: -400px;
+        width: 350px;
+        height: 100%;
+        background: rgba(10, 15, 30, 0.95);
+        border-left: 1px solid #00d2ff;
+        backdrop-filter: blur(10px);
+        transition: right 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        z-index: 50;
+        padding: 30px;
+        color: white;
+        box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+    }
+
+        .info-panel.active {
+            right: 0;
+        }
+
+    .info-header {
+        border-bottom: 2px solid #00d2ff;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .info-title {
+        font-size: 2rem;
+        color: #00d2ff;
+        margin: 0;
+        font-weight: bold;
+    }
+
+    .btn-close-panel {
+        background: none;
+        border: none;
+        color: #aaa;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+        .btn-close-panel:hover {
+            color: white;
+            transform: rotate(90deg);
+        }
+
+    .info-row {
+        margin-bottom: 15px;
+    }
+
+    .info-label {
+        color: #888;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .info-value {
+        font-size: 1.1rem;
+        color: #eee;
+        font-weight: 500;
+    }
+
+    .focus-msg {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 210, 255, 0.2);
+        color: #00d2ff;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        border: 1px solid rgba(0, 210, 255, 0.5);
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+    }
+</style>
+
+<div class="container-fluid p-0">
+    <div class="map-wrapper" id="mapContainer">
+
+        <div id="focusMsg" class="focus-msg">🔒 Камера зафіксована: <span id="focusTargetName"></span></div>
+
+        <div id="sidePanel" class="info-panel">
+            <div class="info-header">
+                <h2 id="panelName" class="info-title">Planet</h2>
+                <button class="btn-close-panel" onclick="closePanel()">×</button>
+            </div>
+
+            <div class="info-row">
+                <div class="info-label">Тип об'єкта</div>
+                <div id="panelType" class="info-value">Planet</div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-label">Опис</div>
+                <div id="panelDesc" class="info-value" style="font-size: 0.95rem; line-height: 1.5; color: #ccc;">...</div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-label">Швидкість руху</div>
+                <div id="panelSpeed" class="info-value">0.0</div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-label">Відстань від центру</div>
+                <div id="panelDist" class="info-value">0.0</div>
+            </div>
+        </div>
+
+        <div class="controls-panel" onmousedown="event.stopPropagation()">
+            <span style="color:#aaa">Швидкість часу:</span>
+            <input type="range" id="timeSlider" min="0" max="50" value="10">
+            <span id="speedDisplay" style="color:#00d2ff; width: 45px; font-weight:bold;">1.0x</span>
+            <div style="width: 1px; height: 20px; background: #555; margin: 0 10px;"></div>
+            <button class="btn btn-sm btn-outline-light rounded-pill" onclick="resetView()">🎯 Скинути камеру</button>
+        </div>
+
+        <canvas id="spaceCanvas"></canvas>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('spaceCanvas');
+    const ctx = canvas.getContext('2d');
+    const sidePanel = document.getElementById('sidePanel');
+    const focusMsg = document.getElementById('focusMsg');
+
+    let planets = [];
+    let width, height, centerX, centerY;
+    let timeSpeed = 1.0;
+    let zoomLevel = 1.0;
+    let panX = 0, panY = 0;
+    let isDragging = false, lastX=0, lastY=0;
+    let followObject = null;
+
+    const planetColors = {
+        'Sun': '#FFD700', 'Mercury': '#B0B0B0', 'Venus': '#E3BB76',
+        'Earth': '#00BFFF', 'Mars': '#FF4500', 'Jupiter': '#D2B48C',
+        'Saturn': '#F4A460', 'Uranus': '#7FFFD4', 'Neptune': '#4169E1', 'Pluto': '#DEB887'
+    };
+
+    function resize() {
+        const wrapper = document.getElementById('mapContainer');
+        width = canvas.width = wrapper.clientWidth;
+        height = canvas.height = wrapper.clientHeight;
+        centerX = width / 2; centerY = height / 2;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // 1. АНІМАЦІЯ 
+    function animate() {
+        requestAnimationFrame(animate);
+        ctx.fillStyle = '#050505'; ctx.fillRect(0,0,width,height);
+
+        // Рух планет
+        planets.forEach(p => {
+            if(p.name !== 'Sun') p.angle += p.rotationSpeed * timeSpeed;
+        });
+
+        // Камера
+        if (followObject) {
+            const orbitR = followObject.distance * 35 * zoomLevel;
+            const objX = Math.cos(followObject.angle) * orbitR;
+            const objY = Math.sin(followObject.angle) * orbitR;
+
+            if (followObject.name === 'Sun') { panX = 0; panY = 0; }
+            else { panX = -objX; panY = -objY; }
+        }
+
+        const cx = centerX + panX, cy = centerY + panY;
+
+        // Малюємо Сонце
+        ctx.beginPath(); ctx.arc(cx, cy, 40 * zoomLevel, 0, 6.28);
+        ctx.fillStyle = '#FFD700';
+        ctx.shadowBlur = 80 * zoomLevel; ctx.shadowColor = 'orange';
+        ctx.fill(); ctx.shadowBlur = 0;
+
+        // Малюємо Планети
+        planets.forEach(p => {
+            if(p.name === 'Sun') return;
+            const r = p.distance * 35 * zoomLevel;
+            p.screenX = cx + Math.cos(p.angle) * r;
+            p.screenY = cy + Math.sin(p.angle) * r;
+
+            if (zoomLevel < 3) {
+                ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.28);
+                ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.lineWidth = 1; ctx.stroke();
+            }
+
+            ctx.beginPath(); ctx.arc(p.screenX, p.screenY, p.size * zoomLevel, 0, 6.28);
+            ctx.fillStyle = p.color;
+
+            if (followObject === p) { ctx.shadowBlur = 20; ctx.shadowColor = '#00d2ff'; }
+            else { ctx.shadowBlur = 10 * zoomLevel; ctx.shadowColor = p.color; }
+            ctx.fill(); ctx.shadowBlur = 0;
+
+            if(zoomLevel > 0.4 || followObject === p) {
+                ctx.fillStyle = followObject === p ? '#00d2ff' : '#aaa';
+                ctx.font = (followObject === p ? "bold " : "") + (12*zoomLevel) + "px Arial";
+                ctx.fillText(p.name, p.screenX + (15*zoomLevel), p.screenY + 4);
+            }
+        });
+    }
+    animate();
+
+    // 2. ОТРИМАННЯ ДАНИХ
+    fetch('/CelestialObjects/GetMapData')
+        .then(r => {
+            if (!r.ok) throw new Error("Помилка завантаження: " + r.status);
+            return r.json();
+        })
+        .then(data => {
+            planets = data.map(p => ({
+                ...p,
+                angle: Math.random() * 6.28,
+                rotationSpeed: (p.speed || Math.random()) * 0.005,
+                size: p.name === 'Sun' ? 40 : (Math.random() * 5 + 6),
+                // Використовуємо колір з сервера або дефолтний
+                color: p.color || planetColors[p.name] || '#FFFFFF'
+            }));
+            console.log('Завантажено об\'єктів:', planets.length);
+        })
+        .catch(err => {
+            console.error("Карта працює без даних сервера.", err);
+            // Додаємо тестові дані, якщо сервер недоступний
+            planets = [
+                { id: 0, name: 'Sun', distance: 0, speed: 0, description: 'Центральна зірка', type: 'Star', 
+                  angle: 0, rotationSpeed: 0, size: 40, color: '#FFD700' }
+            ];
+        });
+
+    // Події миші
+    canvas.addEventListener('mousedown', e => {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        let clickedPlanet = null;
+        const cx = centerX + panX, cy = centerY + panY;
+        const sunDist = Math.hypot(mouseX - cx, mouseY - cy);
+
+        const sunObj = planets.find(p => p.name === 'Sun');
+        if (sunDist < 40 * zoomLevel + 10 && sunObj) clickedPlanet = sunObj;
+
+        if (!clickedPlanet) {
+            planets.forEach(p => {
+                if (p.name === 'Sun') return;
+                const dist = Math.hypot(mouseX - p.screenX, mouseY - p.screenY);
+                if (dist < (p.size * zoomLevel) + 10) clickedPlanet = p;
+            });
+        }
+
+        if (clickedPlanet) {
+            followObject = clickedPlanet;
+            focusMsg.style.opacity = 1;
+            document.getElementById('focusTargetName').innerText = clickedPlanet.name;
+            openPanel(clickedPlanet);
+        } else {
+            isDragging = true;
+            lastX = e.clientX; lastY = e.clientY;
+            if (followObject) { followObject = null; focusMsg.style.opacity = 0; }
+        }
+    });
+
+    window.addEventListener('mouseup', () => isDragging=false);
+    window.addEventListener('mousemove', e => {
+        if(isDragging) {
+            panX += e.clientX - lastX; panY += e.clientY - lastY;
+            lastX = e.clientX; lastY = e.clientY;
+        }
+    });
+
+    document.getElementById('mapContainer').addEventListener('wheel', e => {
+        e.preventDefault(); zoomLevel *= (e.deltaY < 0 ? 1.1 : 0.9);
+        zoomLevel = Math.max(0.1, Math.min(zoomLevel, 8));
+    });
+
+    document.getElementById('timeSlider').addEventListener('input', e => {
+        timeSpeed = e.target.value / 10;
+        document.getElementById('speedDisplay').innerText = timeSpeed.toFixed(1) + 'x';
+    });
+
+    window.resetView = function() {
+        zoomLevel = 1.0; panX = 0; panY = 0;
+        followObject = null; focusMsg.style.opacity = 0;
+        closePanel();
+    }
+
+    function openPanel(p) {
+        document.getElementById('panelName').innerText = p.name;
+        document.getElementById('panelType').innerText = p.type;
+        document.getElementById('panelDesc').innerText = p.description || "Опис відсутній.";
+        document.getElementById('panelSpeed').innerText = p.speed ? p.speed.toFixed(2) : "0";
+        document.getElementById('panelDist').innerText = p.distance ? p.distance.toFixed(1) + " а.о." : "0";
+        sidePanel.classList.add('active');
+    }
+
+    window.closePanel = function() { sidePanel.classList.remove('active'); }
+</script>

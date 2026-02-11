@@ -1,0 +1,94 @@
+﻿@model VirtualPlanetarium.CodeFirst.Models.CelestialObject
+
+@{
+    ViewData["Title"] = "Деталі";
+    Layout = "_Layout";
+}
+
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+
+            <div class="card bg-dark text-white border-secondary shadow-lg" style="border: 1px solid #444;">
+
+                <div class="card-header border-secondary text-center py-4 bg-opacity-10 bg-info">
+                    <h1 class="text-info fw-bold display-5 mb-0">@Model.Name</h1>
+                    <span class="badge bg-primary fs-6 mt-2">@Model.Type?.Name</span>
+                </div>
+
+                <div class="card-body p-5">
+
+                    <div class="text-center mb-5">
+                        <h5 class="text-secondary text-uppercase small letter-spacing-2">Опис</h5>
+                        <p class="lead text-light">@(Model.Description ?? "Опис відсутній.")</p>
+                    </div>
+
+                    <hr class="border-secondary mb-5">
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="p-3 border border-secondary rounded bg-black bg-opacity-25">
+                                <label class="text-info small text-uppercase mb-1">Група / Система</label>
+                                <div class="fs-5">@(Model.Group?.Name ?? "Невідомо")</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 border border-secondary rounded bg-black bg-opacity-25">
+                                <label class="text-info small text-uppercase mb-1">Спектральний клас</label>
+                                <div class="fs-5">@(Model.SpectralClass ?? "—")</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 border border-secondary rounded bg-black bg-opacity-25">
+                                <label class="text-info small text-uppercase mb-1">Відстань (а.о.)</label>
+                                <div class="fs-5">@(Model.RightAscension?.ToString("0.00") ?? "0")</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 border border-secondary rounded bg-black bg-opacity-25">
+                                <label class="text-info small text-uppercase mb-1">Швидкість руху</label>
+                                <div class="fs-5">@(Model.Declination?.ToString("0.00") ?? "0")</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 border border-secondary rounded bg-black bg-opacity-25">
+                                <label class="text-info small text-uppercase mb-1">Дата відкриття</label>
+                                <div class="fs-5">@(Model.DateDiscovered?.ToShortDateString() ?? "Невідомо")</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 border border-secondary rounded bg-black bg-opacity-25">
+                                <label class="text-info small text-uppercase mb-1">Теги</label>
+                                <div class="fs-5 text-muted">@(Model.Tags ?? "—")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="border-secondary mt-5 mb-4">
+
+                    <div class="d-flex justify-content-center gap-3">
+                        <a asp-action="Index" class="btn btn-outline-light px-4 py-2">
+                            ⬅ До Каталогу
+                        </a>
+                        <a asp-action="Map" class="btn btn-outline-info px-4 py-2">
+                            🪐 На Мапу
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    .letter-spacing-2 {
+        letter-spacing: 2px;
+    }
+</style>

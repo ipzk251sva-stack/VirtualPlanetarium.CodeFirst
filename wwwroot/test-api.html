@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест API</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <h1>Тест API планетарію</h1>
+    <button onclick="testAPI()">Перевірити API</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Завантаження...';
+            
+            try {
+                const response = await fetch('http://localhost:5000/CelestialObjects/GetMapData');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h2>✅ API працює!</h2>
+                    <p>Знайдено об'єктів: ${data.length}</p>
+                    <h3>Список об'єктів:</h3>
+                    <ul>
+                        ${data.map(obj => `
+                            <li style="color: ${obj.color}">
+                                <strong>${obj.name}</strong> (${obj.type}) - ${obj.description}
+                                <br>Колір: ${obj.color}
+                            </li>
+                        `).join('')}
+                    </ul>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h2>❌ Помилка</h2>
+                    <p>${error.message}</p>
+                    <p>Переконайтеся, що сервер запущено на localhost:5000</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
